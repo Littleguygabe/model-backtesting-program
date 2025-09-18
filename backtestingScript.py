@@ -7,7 +7,7 @@ import numpy as np
 import inquirer
 
 # Use relative imports for modules within the same package
-from backtestingScripts import plotBacktestingResults as plotResults
+from backtestingScripts.plotBacktestingResults import plotResults
 from backtestingScripts.getFileLocation import getFileLocation
 
 
@@ -142,7 +142,7 @@ def getDfArr():
     folder_to_use = inquirer.prompt(folder_choice)['selection']
 
     split = folder_to_use.split('.')
-    if len(split) == 1: #if there is a folder of backtesting csv data rather than a single instance
+    if len(split) == 1: #if there is a folder of backtesting csv data radther than a single instance
         print('reading data from a folder')
         df_arr = readDataFolder(split[0])
 
@@ -152,15 +152,26 @@ def getDfArr():
 
     return df_arr
 
+def getSharpeRatio(tracking_df):
+    #develop a regression line to be able to get the average return across the portfolio
+    final_portfolio_value = tracking_df.tail(1)['portfolio_val'].values[0]
+
+    periodic_returns = tracking_df['portfolio_val'].pct_change().dropna()
+    std = periodic_returns.std()
+    avg_return = periodic_returns.mean()
+
+    daily_sharpe_ratio = (avg_return)/std
+    annualised_sharpe_ratio = daily_sharpe_ratio * np.sqrt(252)
+
+    return annualised_sharpe_ratio
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Back Testing System the runs on an Already Generated Dataframe')
     parser.add_argument('--starting_capital','-sc',
                         type=float,
                         help='The initial capital for the portfolio.',
                         required=True)
-    parser.add_argument('--plot_results',
-                        help='Plot the Returns of the portfolio on a graph',
-                        action='store_true')
 
     parser.add_argument('--horizon',help='Number of days to Simulate',default=30,type=int)
 
@@ -170,10 +181,6 @@ if __name__ == '__main__':
 ####### generate the model prediction data frames here
 
     df_arr = getDfArr() ## temporary
-    for df in df_arr:
-        print(df)
-
-    quit()
 
 
 ####### end of generating the model prediction data frames
@@ -194,31 +201,38 @@ if __name__ == '__main__':
 
     print(f'Total Strategy Profit: ${total_portfolio_profit:,.2f}')
 
-    if args.plot_results:
-        daily_total_portfolio_value = {}
+
+    daily_total_portfolio_value = {}
+    
+    # Sum portfolio values across all individual backtests for each day
+    for df in portfolio_tracking_df_arr:
+        if not df.empty and 'Date' in df.columns and 'portfolio_val' in df.columns:
+            for _, row in df.iterrows():
+                date = row['Date']
+                value = row['portfolio_val']
+                daily_total_portfolio_value[date] = daily_total_portfolio_value.get(date, 0) + value
+
+    if daily_total_portfolio_value:
+        # Create a single DataFrame for the total portfolio's value over time
+        total_tracking_df = pd.DataFrame(
+            list(daily_total_portfolio_value.items()),
+            columns=['Date', 'portfolio_val']
+        ).sort_values(by='Date').reset_index(drop=True)
+
+        # --- Correct Cumulative Return Calculation ---
+        # Calculate return based on the total aggregated portfolio value vs. the total starting capital.
+        total_tracking_df['cumulative_return'] = (total_tracking_df['portfolio_val'] / args.starting_capital) - 1
+
+        # Pass the single, aggregated DataFrame to the plotting function
         
-        # Sum portfolio values across all individual backtests for each day
-        for df in portfolio_tracking_df_arr:
-            if not df.empty and 'Date' in df.columns and 'portfolio_val' in df.columns:
-                for _, row in df.iterrows():
-                    date = row['Date']
-                    value = row['portfolio_val']
-                    daily_total_portfolio_value[date] = daily_total_portfolio_value.get(date, 0) + value
 
-        if daily_total_portfolio_value:
-            # Create a single DataFrame for the total portfolio's value over time
-            total_tracking_df = pd.DataFrame(
-                list(daily_total_portfolio_value.items()),
-                columns=['Date', 'portfolio_val']
-            ).sort_values(by='Date').reset_index(drop=True)
-
-            # --- Correct Cumulative Return Calculation ---
-            # Calculate return based on the total aggregated portfolio value vs. the total starting capital.
-            total_tracking_df['cumulative_return'] = (total_tracking_df['portfolio_val'] / args.starting_capital) - 1
-
-            # Pass the single, aggregated DataFrame to the plotting function
-            plotResults([total_tracking_df])
-        else:
-            print("No tracking data available to plot.")
+    else:
+        print("No tracking data available to plot.")
 
 
+    ### get the sharpe ratio
+    sharpeRatio = getSharpeRatio(total_tracking_df)
+    print(f'Annualised Sharp Ratio: {sharpeRatio}')
+
+
+    plotResults([total_tracking_df])
