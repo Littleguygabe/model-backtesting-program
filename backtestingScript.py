@@ -6,9 +6,7 @@ import sys
 import numpy as np
 
 # Use relative imports for modules within the same package
-from .backtestingAlgos import generatePredictionDataframes as GPD
-from .backtestingAlgos.plotBacktestingResults import plotResults
-from .backtestingAlgos import loadSyntheticData
+from backtestingScripts import plotBacktestingResults as plotResults
 
 
 # [x] - calculate the final value for each data frame
@@ -132,10 +130,7 @@ if __name__ == '__main__':
 
 ####### generate the model prediction data frames here
 
-    # for debugging and initial development
-    # df_arr = loadSyntheticData.run(args.data_folder)
-    
-    df_arr = GPD.run(args.data_folder,args.starting_capital,args.horizon)
+    df_arr = None ## temporary
 
 ####### end of generating the model prediction data frames
 
