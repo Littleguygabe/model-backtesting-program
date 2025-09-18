@@ -4,9 +4,11 @@ import os
 import pandas as pd
 import sys
 import numpy as np
+import inquirer
 
 # Use relative imports for modules within the same package
 from backtestingScripts import plotBacktestingResults as plotResults
+from backtestingScripts.getFileLocation import getFileLocation
 
 
 # [x] - calculate the final value for each data frame
@@ -110,11 +112,48 @@ def initialisePortfolioDict(df_arr):
 
     return portfolio
 
+def readDataFolder(data_location_name):
+    parent_data_folder_location = getFileLocation('backtestingData')
+    target_dir = os.path.join(parent_data_folder_location,data_location_name)
+
+    df_arr = []
+
+    for data_file in os.listdir(target_dir):
+        df_arr.append(pd.read_csv(os.path.join(target_dir,data_file)))
+
+    return df_arr
+
+def readFile(filename):
+    parent_data_folder_location = getFileLocation('backtestingData')
+    target_file = os.path.join(parent_data_folder_location,filename)
+    read_data = [pd.read_csv(target_file)]
+    return read_data
+
+def getDataFolderList():
+    parent_data_folder_location = getFileLocation('backtestingData')
+    dir_contents = os.listdir(parent_data_folder_location)
+    return dir_contents
+
+def getDfArr():
+    folder_choice = [inquirer.List('selection',
+                                    message='Select A Folder/File to use for the Backtesting Data:',
+                                    choices=getDataFolderList())]
+
+    folder_to_use = inquirer.prompt(folder_choice)['selection']
+
+    split = folder_to_use.split('.')
+    if len(split) == 1: #if there is a folder of backtesting csv data rather than a single instance
+        print('reading data from a folder')
+        df_arr = readDataFolder(split[0])
+
+    else: #if the selection is a single csv file with backtesting data
+        print('reading data from a single folder')
+        df_arr = readFile(folder_to_use)
+
+    return df_arr
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Back Testing System the runs on an Already Generated Dataframe')
-    parser.add_argument('--data_folder',
-                        help='The folder that the data to be back tested is stored in',
-                        required=True)
     parser.add_argument('--starting_capital','-sc',
                         type=float,
                         help='The initial capital for the portfolio.',
@@ -130,7 +169,12 @@ if __name__ == '__main__':
 
 ####### generate the model prediction data frames here
 
-    df_arr = None ## temporary
+    df_arr = getDfArr() ## temporary
+    for df in df_arr:
+        print(df)
+
+    quit()
+
 
 ####### end of generating the model prediction data frames
 
