@@ -152,18 +152,32 @@ def getDfArr():
 
     return df_arr
 
-def getSharpeRatio(tracking_df):
-    #develop a regression line to be able to get the average return across the portfolio
-    final_portfolio_value = tracking_df.tail(1)['portfolio_val'].values[0]
+def getMetrics(tracking_df):
+    metrics_dict = {}
 
     periodic_returns = tracking_df['portfolio_val'].pct_change().dropna()
-    std = periodic_returns.std()
-    avg_return = periodic_returns.mean()
 
-    daily_sharpe_ratio = (avg_return)/std
+    sharpe_avg_return = periodic_returns.mean()
+    sharpe_std = periodic_returns.std()
+    daily_sharpe_ratio = sharpe_avg_return / sharpe_std
     annualised_sharpe_ratio = daily_sharpe_ratio * np.sqrt(252)
+    metrics_dict['sharpe_ratio'] = annualised_sharpe_ratio
 
-    return annualised_sharpe_ratio
+    sortino_avg_return = periodic_returns.mean()
+    target_return = 0
+    downside_returns = periodic_returns.copy()
+    downside_returns[downside_returns > target_return] = 0
+    sortino_std = downside_returns.std()
+
+    if sortino_std == 0:
+        daily_sortino_ratio = np.inf
+    else:
+        daily_sortino_ratio = (sortino_avg_return - target_return) / sortino_std
+
+    annualised_sortino_ratio = daily_sortino_ratio * np.sqrt(252)
+    metrics_dict['sortino_ratio'] = annualised_sortino_ratio
+
+    return metrics_dict
 
 
 if __name__ == '__main__':
@@ -178,9 +192,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-####### generate the model prediction data frames here
+####### retrieve the predictions data -> with min attributes specified in the readme
 
-    df_arr = getDfArr() ## temporary
+    df_arr = getDfArr()
 
 
 ####### end of generating the model prediction data frames
@@ -219,7 +233,6 @@ if __name__ == '__main__':
             columns=['Date', 'portfolio_val']
         ).sort_values(by='Date').reset_index(drop=True)
 
-        # --- Correct Cumulative Return Calculation ---
         # Calculate return based on the total aggregated portfolio value vs. the total starting capital.
         total_tracking_df['cumulative_return'] = (total_tracking_df['portfolio_val'] / args.starting_capital) - 1
 
@@ -231,8 +244,9 @@ if __name__ == '__main__':
 
 
     ### get the sharpe ratio
-    sharpeRatio = getSharpeRatio(total_tracking_df)
-    print(f'Annualised Sharp Ratio: {sharpeRatio}')
+    metrics_dict = getMetrics(total_tracking_df)
+    for metric in metrics_dict:
+        print(f'{metric}:{metrics_dict[metric]}')
 
 
     plotResults([total_tracking_df])
