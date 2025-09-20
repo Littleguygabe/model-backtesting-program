@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -13,12 +14,21 @@ def plotResults(tracking_df_arr):
     output_df = aggregateTotalPortfolioValue(tracking_df_arr)
 
     plt.figure(1,figsize=(12,8))
-    plt.plot(output_df['portfolio_return%'])
+    plt.plot(output_df['portfolio_return%'],label='portfolio return %')
+
+    # plot average regression line
+    max_pr = output_df.tail(1)['portfolio_return%'].values[0]
+    min_pr = output_df.head(1)['portfolio_return%'].values[0]
+    plt.plot(np.linspace(min_pr,max_pr,len(output_df)),label='Average Return Regression Line')
+
+    # plt.plot()
+
 
     plt.title('Total Portfolio Return Value Over Time')
     plt.xlabel('Days Since First Trade')
     plt.ylabel('Total Portfolio Return (%)')
 
     plt.grid(True)
+    plt.legend()
     plt.show()
 

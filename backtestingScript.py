@@ -213,6 +213,8 @@ if __name__ == '__main__':
         total_portfolio_profit += profit
         portfolio_tracking_df_arr.append(tracking_df)
 
+    print('--- Model Backtesting Analaytics ---')
+
     print(f'Total Strategy Profit: ${total_portfolio_profit:,.2f}')
 
 
@@ -246,7 +248,8 @@ if __name__ == '__main__':
     ### get the sharpe ratio
     metrics_dict = getMetrics(total_tracking_df)
     for metric in metrics_dict:
-        print(f'{metric}:{metrics_dict[metric]}')
+        print(f'{metric}: {metrics_dict[metric]}')
 
+    print('------------------------------------')
 
     plotResults([total_tracking_df])
